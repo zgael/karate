@@ -38,6 +38,7 @@ import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.security.KeyStore;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -298,7 +299,7 @@ public class ApacheHttpClient implements HttpClient, HttpRequestInterceptor {
                 map.put(Cookies.VALUE, c.getValue());
                 map.put(Cookies.DOMAIN, c.getDomain());
                 if (c.getExpiryDate() != null) {
-                    map.put(Cookies.MAX_AGE, c.getExpiryDate().getTime());
+                    map.put(Cookies.MAX_AGE, (c.getExpiryDate().getTime() - Instant.now().toEpochMilli())/1000);
                 }
                 map.put(Cookies.SECURE, c.isSecure());
                 io.netty.handler.codec.http.cookie.Cookie nettyCookie = Cookies.fromMap(map);

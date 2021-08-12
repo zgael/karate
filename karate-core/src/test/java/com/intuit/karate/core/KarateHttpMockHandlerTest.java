@@ -3,6 +3,13 @@ package com.intuit.karate.core;
 import static com.intuit.karate.TestUtils.*;
 import static com.intuit.karate.TestUtils.runScenario;
 import com.intuit.karate.http.HttpServer;
+
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.AfterEach;
@@ -267,4 +274,26 @@ class KarateHttpMockHandlerTest {
         matchContains(list, "['foo1=bar1; Domain=localhost', 'foo2=bar2; Domain=localhost']");
     }
 
+    @Test
+    void testSetCookieContentAfterRedirect() {
+        OffsetDateTime dateFormattedForCookie = OffsetDateTime.of(2021, 8, 14, 8, 34, 21, 0, ZoneOffset.UTC);
+        background()
+                .scenario("pathMatches('/first')",
+                        "def responseHeaders = { 'Set-Cookie': 'foo1=bar1; Expires="+DateTimeFormatter.RFC_1123_DATE_TIME.format(dateFormattedForCookie)+"', Location: '/second' }",
+                        "def responseStatus = 302")
+                .scenario("pathMatches('/second')",
+                        "def response = requestHeaders",
+                        "def responseHeaders = { 'Set-Cookie': 'foo2=bar2' }");
+        startMockServer();
+        run(
+                urlStep(),
+                "path 'first'",
+                "form fields { username: 'blah', password: 'blah' }",
+                "method post"
+        );
+        matchVarContains("response", "{ cookie: ['foo1=bar1'] }");
+        Map<String, Object> map = (Map) get("responseHeaders");
+        List<String> list = (List) map.get("Set-Cookie");
+        matchContains(list, "['foo1=bar1; Expires="+DateTimeFormatter.RFC_1123_DATE_TIME.format(dateFormattedForCookie)+"; Domain=localhost', 'foo2=bar2; Domain=localhost']");
+    }
 }
